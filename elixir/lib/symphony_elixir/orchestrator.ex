@@ -234,7 +234,7 @@ defmodule SymphonyElixir.Orchestrator do
         state
 
       {:error, :missing_linear_project_slug} ->
-        Logger.error("Linear project slug missing in WORKFLOW.md")
+        Logger.error("Linear project slug or team key missing in WORKFLOW.md")
         state
 
       {:error, :missing_tracker_kind} ->

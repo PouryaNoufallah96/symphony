@@ -90,6 +90,8 @@ Minimal example:
 tracker:
   kind: linear
   project_slug: "..."
+  # Alternatively, poll all issues in one Linear team:
+  # team_key: "ENG"
 workspace:
   root: ~/code/workspaces
 hooks:
@@ -110,6 +112,8 @@ Title: {{ issue.title }} Body: {{ issue.description }}
 Notes:
 
 - If a value is missing, defaults are used.
+- `tracker.project_slug` narrows polling to one Linear project. `tracker.team_key` can be used
+  instead to poll all active issues in one Linear team, such as a `/team/ENG/all` queue.
 - Safer Codex defaults are used when policy fields are omitted:
   - `codex.approval_policy` defaults to `{"reject":{"sandbox_approval":true,"rules":true,"mcp_elicitations":true}}`
   - `codex.thread_sandbox` defaults to `workspace-write`

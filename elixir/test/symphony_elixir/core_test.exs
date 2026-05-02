@@ -49,7 +49,17 @@ defmodule SymphonyElixir.CoreTest do
     assert {:error, :missing_linear_project_slug} = Config.validate!()
 
     write_workflow_file!(Workflow.workflow_file_path(),
+      tracker_api_token: "token",
+      tracker_project_slug: nil,
+      tracker_team_key: "ULT"
+    )
+
+    assert :ok = Config.validate!()
+    assert Config.settings!().tracker.team_key == "ULT"
+
+    write_workflow_file!(Workflow.workflow_file_path(),
       tracker_project_slug: "project",
+      tracker_team_key: nil,
       codex_command: ""
     )
 
@@ -130,6 +140,7 @@ defmodule SymphonyElixir.CoreTest do
 
     assert Config.settings!().tracker.api_key == env_api_key
     assert Config.settings!().tracker.project_slug == "project"
+    assert Config.settings!().tracker.team_key == nil
     assert :ok = Config.validate!()
   end
 
