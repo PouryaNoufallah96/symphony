@@ -177,6 +177,22 @@ The observability UI now runs on a minimal Phoenix stack:
 make all
 ```
 
+## Maintaining this fork
+
+This branch carries UltraBusiness-specific support for polling a Linear team queue via
+`tracker.team_key`. To bring in upstream Symphony changes later:
+
+```bash
+cd /Users/pourya/projects/tools/symphony
+git fetch origin
+git switch ultrabusiness-team-key
+git merge origin/main
+cd elixir
+mise exec -- mix build
+mise exec -- mix test test/symphony_elixir/core_test.exs:4 test/symphony_elixir/workspace_and_config_test.exs:727
+git push
+```
+
 Run the real external end-to-end test only when you want Symphony to create disposable Linear
 resources and launch a real `codex app-server` session:
 
