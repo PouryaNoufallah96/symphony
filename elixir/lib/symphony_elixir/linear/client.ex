@@ -527,7 +527,8 @@ defmodule SymphonyElixir.Linear.Client do
       labels: extract_labels(issue),
       assigned_to_worker: assigned_to_worker?(assignee, assignee_filter),
       created_at: parse_datetime(issue["createdAt"]),
-      updated_at: parse_datetime(issue["updatedAt"])
+      updated_at: parse_datetime(issue["updatedAt"]),
+      raw: issue
     }
   end
 

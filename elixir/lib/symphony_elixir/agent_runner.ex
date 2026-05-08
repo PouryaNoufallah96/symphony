@@ -1,10 +1,11 @@
 defmodule SymphonyElixir.AgentRunner do
   @moduledoc """
-  Executes a single Linear issue in its workspace with Codex.
+  Executes a single Linear issue in its workspace via the configured agent
+  backend (Codex or Claude Code).
   """
 
   require Logger
-  alias SymphonyElixir.Codex.AppServer
+  alias SymphonyElixir.Agent.Backend
   alias SymphonyElixir.{Config, Linear.Issue, PromptBuilder, Tracker, Workspace}
 
   @type worker_host :: String.t() | nil
@@ -35,7 +36,7 @@ defmodule SymphonyElixir.AgentRunner do
 
         try do
           with :ok <- Workspace.run_before_run_hook(workspace, issue, worker_host) do
-            run_codex_turns(workspace, issue, codex_update_recipient, opts, worker_host)
+            run_agent_turns(workspace, issue, codex_update_recipient, opts, worker_host)
           end
         after
           Workspace.run_after_run_hook(workspace, issue, worker_host)
@@ -76,25 +77,43 @@ defmodule SymphonyElixir.AgentRunner do
 
   defp send_worker_runtime_info(_recipient, _issue, _worker_host, _workspace), do: :ok
 
-  defp run_codex_turns(workspace, issue, codex_update_recipient, opts, worker_host) do
+  defp run_agent_turns(workspace, issue, codex_update_recipient, opts, worker_host) do
     max_turns = Keyword.get(opts, :max_turns, Config.settings!().agent.max_turns)
     issue_state_fetcher = Keyword.get(opts, :issue_state_fetcher, &Tracker.fetch_issue_states_by_ids/1)
 
-    with {:ok, session} <- AppServer.start_session(workspace, worker_host: worker_host) do
+    with {:ok, session} <- Backend.start_session(workspace, worker_host: worker_host) do
       try do
-        do_run_codex_turns(session, workspace, issue, codex_update_recipient, opts, issue_state_fetcher, 1, max_turns)
+        do_run_agent_turns(
+          session,
+          workspace,
+          issue,
+          codex_update_recipient,
+          opts,
+          issue_state_fetcher,
+          1,
+          max_turns
+        )
       after
-        AppServer.stop_session(session)
+        Backend.stop_session(session)
       end
     end
   end
 
-  defp do_run_codex_turns(app_session, workspace, issue, codex_update_recipient, opts, issue_state_fetcher, turn_number, max_turns) do
+  defp do_run_agent_turns(
+         agent_session,
+         workspace,
+         issue,
+         codex_update_recipient,
+         opts,
+         issue_state_fetcher,
+         turn_number,
+         max_turns
+       ) do
     prompt = build_turn_prompt(issue, opts, turn_number, max_turns)
 
     with {:ok, turn_session} <-
-           AppServer.run_turn(
-             app_session,
+           Backend.run_turn(
+             agent_session,
              prompt,
              issue,
              on_message: codex_message_handler(codex_update_recipient, issue)
@@ -105,8 +124,10 @@ defmodule SymphonyElixir.AgentRunner do
         {:continue, refreshed_issue} when turn_number < max_turns ->
           Logger.info("Continuing agent run for #{issue_context(refreshed_issue)} after normal turn completion turn=#{turn_number}/#{max_turns}")
 
-          do_run_codex_turns(
-            app_session,
+          next_session = bump_turn_number(agent_session, turn_number)
+
+          do_run_agent_turns(
+            next_session,
             workspace,
             refreshed_issue,
             codex_update_recipient,
@@ -129,6 +150,14 @@ defmodule SymphonyElixir.AgentRunner do
       end
     end
   end
+
+  # Codex sessions ignore turn_number; ClaudeCode sessions read it for the
+  # next turn's filename/numbering. Keep the bump map-key-safe so both
+  # backends accept it.
+  defp bump_turn_number(%{turn_number: _} = session, completed_turn),
+    do: %{session | turn_number: completed_turn}
+
+  defp bump_turn_number(session, _completed_turn), do: session
 
   defp build_turn_prompt(issue, opts, 1, _max_turns), do: PromptBuilder.build_prompt(issue, opts)
 

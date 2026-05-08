@@ -55,7 +55,7 @@ defmodule Mix.Tasks.PrBody.Check do
 
   defp read_template_candidate(path) do
     case File.read(path) do
-      {:ok, content} -> {:ok, path, content}
+      {:ok, content} -> {:ok, path, normalize_content(content)}
       {:error, _reason} -> nil
     end
   end
@@ -69,7 +69,7 @@ defmodule Mix.Tasks.PrBody.Check do
 
   defp read_file(path) do
     case File.read(path) do
-      {:ok, content} -> {:ok, content}
+      {:ok, content} -> {:ok, normalize_content(content)}
       {:error, reason} -> {:error, "Unable to read #{path}: #{inspect(reason)}"}
     end
   end
@@ -104,6 +104,10 @@ defmodule Mix.Tasks.PrBody.Check do
     |> check_order(body, headings)
     |> check_no_placeholders(body)
     |> check_sections_from_template(template, body, headings)
+  end
+
+  defp normalize_content(content) when is_binary(content) do
+    String.replace(content, "\r\n", "\n")
   end
 
   defp check_required_headings(errors, body, headings) do

@@ -12,6 +12,10 @@ This directory contains the Elixir agent orchestration service that polls Linear
 ## Codebase-Specific Conventions
 
 - Runtime config is loaded from `WORKFLOW.md` front matter via `SymphonyElixir.Workflow` and `SymphonyElixir.Config`.
+- Tracker implementations must extend `SymphonyElixir.Tracker`; do not create a parallel tracker
+  abstraction. Current tracker kinds are `linear`, `memory`, `ado`, and `github`.
+- Prompt templates receive string-keyed `agent`, `tracker`, and `vcs` assigns from config. Keep new
+  config intended for Solid conditionals reachable through `SymphonyElixir.Config`.
 - Keep the implementation aligned with [`../SPEC.md`](../SPEC.md) where practical.
   - The implementation may be a superset of the spec.
   - The implementation must not conflict with the spec.

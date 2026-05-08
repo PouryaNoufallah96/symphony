@@ -1,0 +1,5 @@
+# Project-level Codex config for UltraBusiness
+# Docs: https://developers.openai.com/codex/config-reference
+
+model = "gpt-5.5"
+model_reasoning_effort = "xhigh"

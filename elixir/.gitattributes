@@ -1,1 +1,2 @@
-test/fixtures/status_dashboard_snapshots/* linguist-generated=true
+* text=auto eol=lf
+test/fixtures/status_dashboard_snapshots/* text eol=lf linguist-generated=true

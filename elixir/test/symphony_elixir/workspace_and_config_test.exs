@@ -33,7 +33,7 @@ defmodule SymphonyElixir.WorkspaceAndConfigTest do
 
       assert {:ok, workspace} = Workspace.create_for_issue("S-1")
       assert File.exists?(Path.join(workspace, ".git"))
-      assert File.read!(Path.join(workspace, "README.md")) == "hook clone\n"
+      assert normalize_newlines(File.read!(Path.join(workspace, "README.md"))) == "hook clone\n"
       assert File.read!(Path.join([workspace, "keep", "file.txt"])) == "keep me"
     after
       File.rm_rf(test_root)
@@ -1259,19 +1259,22 @@ defmodule SymphonyElixir.WorkspaceAndConfigTest do
       System.put_env("SYMP_TEST_SSH_TRACE", trace_file)
       System.put_env("PATH", test_root <> ":" <> (previous_path || ""))
 
-      File.write!(fake_ssh, """
-      #!/bin/sh
-      trace_file="${SYMP_TEST_SSH_TRACE:-/tmp/symphony-fake-ssh.trace}"
-      printf 'ARGV:%s\\n' "$*" >> "$trace_file"
+      File.write!(
+        fake_ssh,
+        shell_script("""
+        #!/bin/sh
+        trace_file="${SYMP_TEST_SSH_TRACE:-/tmp/symphony-fake-ssh.trace}"
+        printf 'ARGV:%s\\n' "$*" >> "$trace_file"
 
-      case "$*" in
-        *"__SYMPHONY_WORKSPACE__"*)
-          printf '%s\\t%s\\t%s\\n' '__SYMPHONY_WORKSPACE__' '1' '#{workspace_path}'
-          ;;
-      esac
+        case "$*" in
+          *"__SYMPHONY_WORKSPACE__"*)
+            printf '%s\\t%s\\t%s\\n' '__SYMPHONY_WORKSPACE__' '1' '#{workspace_path}'
+            ;;
+        esac
 
-      exit 0
-      """)
+        exit 0
+        """)
+      )
 
       File.chmod!(fake_ssh, 0o755)
 

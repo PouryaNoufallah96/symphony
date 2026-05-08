@@ -5,49 +5,57 @@ defmodule Mix.Tasks.PrBody.CheckTest do
 
   import ExUnit.CaptureIO
 
-  @template """
-  #### Context
+  @template String.replace(
+              """
+              #### Context
 
-  <!-- Why is this change needed? -->
+              <!-- Why is this change needed? -->
 
-  #### TL;DR
+              #### TL;DR
 
-  *<!-- A short summary -->*
+              *<!-- A short summary -->*
 
-  #### Summary
+              #### Summary
 
-  - <!-- Summary bullet -->
+              - <!-- Summary bullet -->
 
-  #### Alternatives
+              #### Alternatives
 
-  - <!-- Alternative bullet -->
+              - <!-- Alternative bullet -->
 
-  #### Test Plan
+              #### Test Plan
 
-  - [ ] <!-- Test checkbox -->
-  """
+              - [ ] <!-- Test checkbox -->
+              """,
+              "\r\n",
+              "\n"
+            )
 
-  @valid_body """
-  #### Context
+  @valid_body String.replace(
+                """
+                #### Context
 
-  Context text.
+                Context text.
 
-  #### TL;DR
+                #### TL;DR
 
-  Short summary.
+                Short summary.
 
-  #### Summary
+                #### Summary
 
-  - First change.
+                - First change.
 
-  #### Alternatives
+                #### Alternatives
 
-  - Alternative considered.
+                - Alternative considered.
 
-  #### Test Plan
+                #### Test Plan
 
-  - [x] Ran targeted checks.
-  """
+                - [x] Ran targeted checks.
+                """,
+                "\r\n",
+                "\n"
+              )
 
   setup do
     Mix.Task.reenable("pr_body.check")

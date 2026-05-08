@@ -101,35 +101,38 @@ defmodule SymphonyElixir.AppServerTest do
       System.put_env("SYMP_TEST_CODEx_TRACE", trace_file)
       File.mkdir_p!(workspace)
 
-      File.write!(codex_binary, """
-      #!/bin/sh
-      trace_file="${SYMP_TEST_CODEx_TRACE:-/tmp/codex-supported-turn-policies.trace}"
-      count=0
+      File.write!(
+        codex_binary,
+        shell_script("""
+        #!/bin/sh
+        trace_file="${SYMP_TEST_CODEx_TRACE:-/tmp/codex-supported-turn-policies.trace}"
+        count=0
 
-      while IFS= read -r line; do
-        count=$((count + 1))
-        printf 'JSON:%s\\n' "$line" >> "$trace_file"
+        while IFS= read -r line; do
+          count=$((count + 1))
+          printf 'JSON:%s\\n' "$line" >> "$trace_file"
 
-        case "$count" in
-          1)
-            printf '%s\\n' '{"id":1,"result":{}}'
-            ;;
-          2)
-            printf '%s\\n' '{"id":2,"result":{"thread":{"id":"thread-1001"}}}'
-            ;;
-          3)
-            printf '%s\\n' '{"id":3,"result":{"turn":{"id":"turn-1001"}}}'
-            ;;
-          4)
-            printf '%s\\n' '{"method":"turn/completed"}'
-            exit 0
-            ;;
-          *)
-            exit 0
-            ;;
-        esac
-      done
-      """)
+          case "$count" in
+            1)
+              printf '%s\\n' '{"id":1,"result":{}}'
+              ;;
+            2)
+              printf '%s\\n' '{"id":2,"result":{"thread":{"id":"thread-1001"}}}'
+              ;;
+            3)
+              printf '%s\\n' '{"id":3,"result":{"turn":{"id":"turn-1001"}}}'
+              ;;
+            4)
+              printf '%s\\n' '{"method":"turn/completed"}'
+              exit 0
+              ;;
+            *)
+              exit 0
+              ;;
+          esac
+        done
+        """)
+      )
 
       File.chmod!(codex_binary, 0o755)
 
@@ -208,33 +211,36 @@ defmodule SymphonyElixir.AppServerTest do
       System.put_env("SYMP_TEST_CODEx_TRACE", trace_file)
       File.mkdir_p!(workspace)
 
-      File.write!(codex_binary, """
-      #!/bin/sh
-      trace_file="${SYMP_TEST_CODEx_TRACE:-/tmp/codex-input.trace}"
-      count=0
-      while IFS= read -r line; do
-        count=$((count + 1))
-        printf 'JSON:%s\\n' \"$line\" >> \"$trace_file\"
+      File.write!(
+        codex_binary,
+        shell_script("""
+        #!/bin/sh
+        trace_file="${SYMP_TEST_CODEx_TRACE:-/tmp/codex-input.trace}"
+        count=0
+        while IFS= read -r line; do
+          count=$((count + 1))
+          printf 'JSON:%s\\n' \"$line\" >> \"$trace_file\"
 
-        case \"$count\" in
-          1)
-            printf '%s\\n' '{\"id\":1,\"result\":{}}'
-            ;;
-          2)
-            printf '%s\\n' '{\"id\":2,\"result\":{\"thread\":{\"id\":\"thread-88\"}}}'
-            ;;
-          3)
-            printf '%s\\n' '{\"id\":3,\"result\":{\"turn\":{\"id\":\"turn-88\"}}}'
-            ;;
-          4)
-            printf '%s\\n' '{\"method\":\"turn/input_required\",\"id\":\"resp-1\",\"params\":{\"requiresInput\":true,\"reason\":\"blocked\"}}'
-            ;;
-          *)
-            exit 0
-            ;;
-        esac
-      done
-      """)
+          case \"$count\" in
+            1)
+              printf '%s\\n' '{\"id\":1,\"result\":{}}'
+              ;;
+            2)
+              printf '%s\\n' '{\"id\":2,\"result\":{\"thread\":{\"id\":\"thread-88\"}}}'
+              ;;
+            3)
+              printf '%s\\n' '{\"id\":3,\"result\":{\"turn\":{\"id\":\"turn-88\"}}}'
+              ;;
+            4)
+              printf '%s\\n' '{\"method\":\"turn/input_required\",\"id\":\"resp-1\",\"params\":{\"requiresInput\":true,\"reason\":\"blocked\"}}'
+              ;;
+            *)
+              exit 0
+              ;;
+          esac
+        done
+        """)
+      )
 
       File.chmod!(codex_binary, 0o755)
 
@@ -275,29 +281,32 @@ defmodule SymphonyElixir.AppServerTest do
       codex_binary = Path.join(test_root, "fake-codex")
       File.mkdir_p!(workspace)
 
-      File.write!(codex_binary, """
-      #!/bin/sh
-      count=0
-      while IFS= read -r _line; do
-        count=$((count + 1))
+      File.write!(
+        codex_binary,
+        shell_script("""
+        #!/bin/sh
+        count=0
+        while IFS= read -r _line; do
+          count=$((count + 1))
 
-        case "$count" in
-          1)
-            printf '%s\\n' '{"id":1,"result":{}}'
-            ;;
-          2)
-            printf '%s\\n' '{"id":2,"result":{"thread":{"id":"thread-89"}}}'
-            ;;
-          3)
-            printf '%s\\n' '{"id":3,"result":{"turn":{"id":"turn-89"}}}'
-            printf '%s\\n' '{"id":99,"method":"item/commandExecution/requestApproval","params":{"command":"gh pr view","cwd":"/tmp","reason":"need approval"}}'
-            ;;
-          *)
-            sleep 1
-            ;;
-        esac
-      done
-      """)
+          case "$count" in
+            1)
+              printf '%s\\n' '{"id":1,"result":{}}'
+              ;;
+            2)
+              printf '%s\\n' '{"id":2,"result":{"thread":{"id":"thread-89"}}}'
+              ;;
+            3)
+              printf '%s\\n' '{"id":3,"result":{"turn":{"id":"turn-89"}}}'
+              printf '%s\\n' '{"id":99,"method":"item/commandExecution/requestApproval","params":{"command":"gh pr view","cwd":"/tmp","reason":"need approval"}}'
+              ;;
+            *)
+              sleep 1
+              ;;
+          esac
+        done
+        """)
+      )
 
       File.chmod!(codex_binary, 0o755)
 
@@ -350,37 +359,40 @@ defmodule SymphonyElixir.AppServerTest do
       System.put_env("SYMP_TEST_CODex_TRACE", trace_file)
       File.mkdir_p!(workspace)
 
-      File.write!(codex_binary, """
-      #!/bin/sh
-      trace_file="${SYMP_TEST_CODex_TRACE:-/tmp/codex-auto-approve.trace}"
-      count=0
-      while IFS= read -r line; do
-        count=$((count + 1))
-        printf 'JSON:%s\\n' \"$line\" >> \"$trace_file\"
+      File.write!(
+        codex_binary,
+        shell_script("""
+        #!/bin/sh
+        trace_file="${SYMP_TEST_CODex_TRACE:-/tmp/codex-auto-approve.trace}"
+        count=0
+        while IFS= read -r line; do
+          count=$((count + 1))
+          printf 'JSON:%s\\n' \"$line\" >> \"$trace_file\"
 
-        case \"$count\" in
-          1)
-            printf '%s\\n' '{\"id\":1,\"result\":{}}'
-            ;;
-          2)
-            ;;
-          3)
-            printf '%s\\n' '{\"id\":2,\"result\":{\"thread\":{\"id\":\"thread-89\"}}}'
-            ;;
-          4)
-            printf '%s\\n' '{\"id\":3,\"result\":{\"turn\":{\"id\":\"turn-89\"}}}'
-            printf '%s\\n' '{\"id\":99,\"method\":\"item/commandExecution/requestApproval\",\"params\":{\"command\":\"gh pr view\",\"cwd\":\"/tmp\",\"reason\":\"need approval\"}}'
-            ;;
-          5)
-            printf '%s\\n' '{\"method\":\"turn/completed\"}'
-            exit 0
-            ;;
-          *)
-            exit 0
-            ;;
-        esac
-      done
-      """)
+          case \"$count\" in
+            1)
+              printf '%s\\n' '{\"id\":1,\"result\":{}}'
+              ;;
+            2)
+              ;;
+            3)
+              printf '%s\\n' '{\"id\":2,\"result\":{\"thread\":{\"id\":\"thread-89\"}}}'
+              ;;
+            4)
+              printf '%s\\n' '{\"id\":3,\"result\":{\"turn\":{\"id\":\"turn-89\"}}}'
+              printf '%s\\n' '{\"id\":99,\"method\":\"item/commandExecution/requestApproval\",\"params\":{\"command\":\"gh pr view\",\"cwd\":\"/tmp\",\"reason\":\"need approval\"}}'
+              ;;
+            5)
+              printf '%s\\n' '{\"method\":\"turn/completed\"}'
+              exit 0
+              ;;
+            *)
+              exit 0
+              ;;
+          esac
+        done
+        """)
+      )
 
       File.chmod!(codex_binary, 0o755)
 
@@ -487,37 +499,40 @@ defmodule SymphonyElixir.AppServerTest do
       System.put_env("SYMP_TEST_CODEx_TRACE", trace_file)
       File.mkdir_p!(workspace)
 
-      File.write!(codex_binary, """
-      #!/bin/sh
-      trace_file="${SYMP_TEST_CODEx_TRACE:-/tmp/codex-tool-user-input-auto-approve.trace}"
-      count=0
-      while IFS= read -r line; do
-        count=$((count + 1))
-        printf 'JSON:%s\\n' \"$line\" >> \"$trace_file\"
+      File.write!(
+        codex_binary,
+        shell_script("""
+        #!/bin/sh
+        trace_file="${SYMP_TEST_CODEx_TRACE:-/tmp/codex-tool-user-input-auto-approve.trace}"
+        count=0
+        while IFS= read -r line; do
+          count=$((count + 1))
+          printf 'JSON:%s\\n' \"$line\" >> \"$trace_file\"
 
-        case \"$count\" in
-          1)
-            printf '%s\\n' '{\"id\":1,\"result\":{}}'
-            ;;
-          2)
-            ;;
-          3)
-            printf '%s\\n' '{\"id\":2,\"result\":{\"thread\":{\"id\":\"thread-717\"}}}'
-            ;;
-          4)
-            printf '%s\\n' '{\"id\":3,\"result\":{\"turn\":{\"id\":\"turn-717\"}}}'
-            printf '%s\\n' '{\"id\":110,\"method\":\"item/tool/requestUserInput\",\"params\":{\"itemId\":\"call-717\",\"questions\":[{\"header\":\"Approve app tool call?\",\"id\":\"mcp_tool_call_approval_call-717\",\"isOther\":false,\"isSecret\":false,\"options\":[{\"description\":\"Run the tool and continue.\",\"label\":\"Approve Once\"},{\"description\":\"Run the tool and remember this choice for this session.\",\"label\":\"Approve this Session\"},{\"description\":\"Decline this tool call and continue.\",\"label\":\"Deny\"},{\"description\":\"Cancel this tool call\",\"label\":\"Cancel\"}],\"question\":\"The linear MCP server wants to run the tool \\\"Save issue\\\", which may modify or delete data. Allow this action?\"}],\"threadId\":\"thread-717\",\"turnId\":\"turn-717\"}}'
-            ;;
-          5)
-            printf '%s\\n' '{\"method\":\"turn/completed\"}'
-            exit 0
-            ;;
-          *)
-            exit 0
-            ;;
-        esac
-      done
-      """)
+          case \"$count\" in
+            1)
+              printf '%s\\n' '{\"id\":1,\"result\":{}}'
+              ;;
+            2)
+              ;;
+            3)
+              printf '%s\\n' '{\"id\":2,\"result\":{\"thread\":{\"id\":\"thread-717\"}}}'
+              ;;
+            4)
+              printf '%s\\n' '{\"id\":3,\"result\":{\"turn\":{\"id\":\"turn-717\"}}}'
+              printf '%s\\n' '{\"id\":110,\"method\":\"item/tool/requestUserInput\",\"params\":{\"itemId\":\"call-717\",\"questions\":[{\"header\":\"Approve app tool call?\",\"id\":\"mcp_tool_call_approval_call-717\",\"isOther\":false,\"isSecret\":false,\"options\":[{\"description\":\"Run the tool and continue.\",\"label\":\"Approve Once\"},{\"description\":\"Run the tool and remember this choice for this session.\",\"label\":\"Approve this Session\"},{\"description\":\"Decline this tool call and continue.\",\"label\":\"Deny\"},{\"description\":\"Cancel this tool call\",\"label\":\"Cancel\"}],\"question\":\"The linear MCP server wants to run the tool \\\"Save issue\\\", which may modify or delete data. Allow this action?\"}],\"threadId\":\"thread-717\",\"turnId\":\"turn-717\"}}'
+              ;;
+            5)
+              printf '%s\\n' '{\"method\":\"turn/completed\"}'
+              exit 0
+              ;;
+            *)
+              exit 0
+              ;;
+          esac
+        done
+        """)
+      )
 
       File.chmod!(codex_binary, 0o755)
 
@@ -574,35 +589,38 @@ defmodule SymphonyElixir.AppServerTest do
       codex_binary = Path.join(test_root, "fake-codex")
       File.mkdir_p!(workspace)
 
-      File.write!(codex_binary, """
-      #!/bin/sh
-      count=0
-      while IFS= read -r _line; do
-        count=$((count + 1))
+      File.write!(
+        codex_binary,
+        shell_script("""
+        #!/bin/sh
+        count=0
+        while IFS= read -r _line; do
+          count=$((count + 1))
 
-        case "$count" in
-          1)
-            printf '%s\\n' '{"id":1,"result":{}}'
-            ;;
-          2)
-            ;;
-          3)
-            printf '%s\\n' '{"id":2,"result":{"thread":{"id":"thread-718"}}}'
-            ;;
-          4)
-            printf '%s\\n' '{"id":3,"result":{"turn":{"id":"turn-718"}}}'
-            printf '%s\\n' '{"id":111,"method":"item/tool/requestUserInput","params":{"itemId":"call-718","questions":[{"header":"Provide context","id":"freeform-718","isOther":false,"isSecret":false,"options":null,"question":"What comment should I post back to the issue?"}],"threadId":"thread-718","turnId":"turn-718"}}'
-            ;;
-          5)
-            printf '%s\\n' '{"method":"turn/completed"}'
-            exit 0
-            ;;
-          *)
-            exit 0
-            ;;
-        esac
-      done
-      """)
+          case "$count" in
+            1)
+              printf '%s\\n' '{"id":1,"result":{}}'
+              ;;
+            2)
+              ;;
+            3)
+              printf '%s\\n' '{"id":2,"result":{"thread":{"id":"thread-718"}}}'
+              ;;
+            4)
+              printf '%s\\n' '{"id":3,"result":{"turn":{"id":"turn-718"}}}'
+              printf '%s\\n' '{"id":111,"method":"item/tool/requestUserInput","params":{"itemId":"call-718","questions":[{"header":"Provide context","id":"freeform-718","isOther":false,"isSecret":false,"options":null,"question":"What comment should I post back to the issue?"}],"threadId":"thread-718","turnId":"turn-718"}}'
+              ;;
+            5)
+              printf '%s\\n' '{"method":"turn/completed"}'
+              exit 0
+              ;;
+            *)
+              exit 0
+              ;;
+          esac
+        done
+        """)
+      )
 
       File.chmod!(codex_binary, 0o755)
 
@@ -662,37 +680,40 @@ defmodule SymphonyElixir.AppServerTest do
       System.put_env("SYMP_TEST_CODEx_TRACE", trace_file)
       File.mkdir_p!(workspace)
 
-      File.write!(codex_binary, """
-      #!/bin/sh
-      trace_file="${SYMP_TEST_CODEx_TRACE:-/tmp/codex-tool-user-input-options.trace}"
-      count=0
-      while IFS= read -r line; do
-        count=$((count + 1))
-        printf 'JSON:%s\\n' \"$line\" >> \"$trace_file\"
+      File.write!(
+        codex_binary,
+        shell_script("""
+        #!/bin/sh
+        trace_file="${SYMP_TEST_CODEx_TRACE:-/tmp/codex-tool-user-input-options.trace}"
+        count=0
+        while IFS= read -r line; do
+          count=$((count + 1))
+          printf 'JSON:%s\\n' \"$line\" >> \"$trace_file\"
 
-        case \"$count\" in
-          1)
-            printf '%s\\n' '{\"id\":1,\"result\":{}}'
-            ;;
-          2)
-            ;;
-          3)
-            printf '%s\\n' '{\"id\":2,\"result\":{\"thread\":{\"id\":\"thread-719\"}}}'
-            ;;
-          4)
-            printf '%s\\n' '{\"id\":3,\"result\":{\"turn\":{\"id\":\"turn-719\"}}}'
-            printf '%s\\n' '{\"id\":112,\"method\":\"item/tool/requestUserInput\",\"params\":{\"itemId\":\"call-719\",\"questions\":[{\"header\":\"Choose an action\",\"id\":\"options-719\",\"isOther\":false,\"isSecret\":false,\"options\":[{\"description\":\"Use the default behavior.\",\"label\":\"Use default\"},{\"description\":\"Skip this step.\",\"label\":\"Skip\"}],\"question\":\"How should I proceed?\"}],\"threadId\":\"thread-719\",\"turnId\":\"turn-719\"}}'
-            ;;
-          5)
-            printf '%s\\n' '{\"method\":\"turn/completed\"}'
-            exit 0
-            ;;
-          *)
-            exit 0
-            ;;
-        esac
-      done
-      """)
+          case \"$count\" in
+            1)
+              printf '%s\\n' '{\"id\":1,\"result\":{}}'
+              ;;
+            2)
+              ;;
+            3)
+              printf '%s\\n' '{\"id\":2,\"result\":{\"thread\":{\"id\":\"thread-719\"}}}'
+              ;;
+            4)
+              printf '%s\\n' '{\"id\":3,\"result\":{\"turn\":{\"id\":\"turn-719\"}}}'
+              printf '%s\\n' '{\"id\":112,\"method\":\"item/tool/requestUserInput\",\"params\":{\"itemId\":\"call-719\",\"questions\":[{\"header\":\"Choose an action\",\"id\":\"options-719\",\"isOther\":false,\"isSecret\":false,\"options\":[{\"description\":\"Use the default behavior.\",\"label\":\"Use default\"},{\"description\":\"Skip this step.\",\"label\":\"Skip\"}],\"question\":\"How should I proceed?\"}],\"threadId\":\"thread-719\",\"turnId\":\"turn-719\"}}'
+              ;;
+            5)
+              printf '%s\\n' '{\"method\":\"turn/completed\"}'
+              exit 0
+              ;;
+            *)
+              exit 0
+              ;;
+          esac
+        done
+        """)
+      )
 
       File.chmod!(codex_binary, 0o755)
 
@@ -762,37 +783,40 @@ defmodule SymphonyElixir.AppServerTest do
       System.put_env("SYMP_TEST_CODEx_TRACE", trace_file)
       File.mkdir_p!(workspace)
 
-      File.write!(codex_binary, """
-      #!/bin/sh
-      trace_file="${SYMP_TEST_CODEx_TRACE:-/tmp/codex-tool-call.trace}"
-      count=0
-      while IFS= read -r line; do
-        count=$((count + 1))
-        printf 'JSON:%s\\n' \"$line\" >> \"$trace_file\"
+      File.write!(
+        codex_binary,
+        shell_script("""
+        #!/bin/sh
+        trace_file="${SYMP_TEST_CODEx_TRACE:-/tmp/codex-tool-call.trace}"
+        count=0
+        while IFS= read -r line; do
+          count=$((count + 1))
+          printf 'JSON:%s\\n' \"$line\" >> \"$trace_file\"
 
-        case \"$count\" in
-          1)
-            printf '%s\\n' '{\"id\":1,\"result\":{}}'
-            ;;
-          2)
-            ;;
-          3)
-            printf '%s\\n' '{\"id\":2,\"result\":{\"thread\":{\"id\":\"thread-90\"}}}'
-            ;;
-          4)
-            printf '%s\\n' '{\"id\":3,\"result\":{\"turn\":{\"id\":\"turn-90\"}}}'
-            printf '%s\\n' '{\"id\":101,\"method\":\"item/tool/call\",\"params\":{\"tool\":\"some_tool\",\"callId\":\"call-90\",\"threadId\":\"thread-90\",\"turnId\":\"turn-90\",\"arguments\":{}}}'
-            ;;
-          5)
-            printf '%s\\n' '{\"method\":\"turn/completed\"}'
-            exit 0
-            ;;
-          *)
-            exit 0
-            ;;
-        esac
-      done
-      """)
+          case \"$count\" in
+            1)
+              printf '%s\\n' '{\"id\":1,\"result\":{}}'
+              ;;
+            2)
+              ;;
+            3)
+              printf '%s\\n' '{\"id\":2,\"result\":{\"thread\":{\"id\":\"thread-90\"}}}'
+              ;;
+            4)
+              printf '%s\\n' '{\"id\":3,\"result\":{\"turn\":{\"id\":\"turn-90\"}}}'
+              printf '%s\\n' '{\"id\":101,\"method\":\"item/tool/call\",\"params\":{\"tool\":\"some_tool\",\"callId\":\"call-90\",\"threadId\":\"thread-90\",\"turnId\":\"turn-90\",\"arguments\":{}}}'
+              ;;
+            5)
+              printf '%s\\n' '{\"method\":\"turn/completed\"}'
+              exit 0
+              ;;
+            *)
+              exit 0
+              ;;
+          esac
+        done
+        """)
+      )
 
       File.chmod!(codex_binary, 0o755)
 
@@ -863,37 +887,40 @@ defmodule SymphonyElixir.AppServerTest do
       System.put_env("SYMP_TEST_CODEx_TRACE", trace_file)
       File.mkdir_p!(workspace)
 
-      File.write!(codex_binary, """
-      #!/bin/sh
-      trace_file="${SYMP_TEST_CODEx_TRACE:-/tmp/codex-supported-tool-call.trace}"
-      count=0
-      while IFS= read -r line; do
-        count=$((count + 1))
-        printf 'JSON:%s\\n' \"$line\" >> \"$trace_file\"
+      File.write!(
+        codex_binary,
+        shell_script("""
+        #!/bin/sh
+        trace_file="${SYMP_TEST_CODEx_TRACE:-/tmp/codex-supported-tool-call.trace}"
+        count=0
+        while IFS= read -r line; do
+          count=$((count + 1))
+          printf 'JSON:%s\\n' \"$line\" >> \"$trace_file\"
 
-        case \"$count\" in
-          1)
-            printf '%s\\n' '{\"id\":1,\"result\":{}}'
-            ;;
-          2)
-            ;;
-          3)
-            printf '%s\\n' '{\"id\":2,\"result\":{\"thread\":{\"id\":\"thread-90a\"}}}'
-            ;;
-          4)
-            printf '%s\\n' '{\"id\":3,\"result\":{\"turn\":{\"id\":\"turn-90a\"}}}'
-            printf '%s\\n' '{\"id\":102,\"method\":\"item/tool/call\",\"params\":{\"name\":\"linear_graphql\",\"callId\":\"call-90a\",\"threadId\":\"thread-90a\",\"turnId\":\"turn-90a\",\"arguments\":{\"query\":\"query Viewer { viewer { id } }\",\"variables\":{\"includeTeams\":false}}}}'
-            ;;
-          5)
-            printf '%s\\n' '{\"method\":\"turn/completed\"}'
-            exit 0
-            ;;
-          *)
-            exit 0
-            ;;
-        esac
-      done
-      """)
+          case \"$count\" in
+            1)
+              printf '%s\\n' '{\"id\":1,\"result\":{}}'
+              ;;
+            2)
+              ;;
+            3)
+              printf '%s\\n' '{\"id\":2,\"result\":{\"thread\":{\"id\":\"thread-90a\"}}}'
+              ;;
+            4)
+              printf '%s\\n' '{\"id\":3,\"result\":{\"turn\":{\"id\":\"turn-90a\"}}}'
+              printf '%s\\n' '{\"id\":102,\"method\":\"item/tool/call\",\"params\":{\"name\":\"linear_graphql\",\"callId\":\"call-90a\",\"threadId\":\"thread-90a\",\"turnId\":\"turn-90a\",\"arguments\":{\"query\":\"query Viewer { viewer { id } }\",\"variables\":{\"includeTeams\":false}}}}'
+              ;;
+            5)
+              printf '%s\\n' '{\"method\":\"turn/completed\"}'
+              exit 0
+              ;;
+            *)
+              exit 0
+              ;;
+          esac
+        done
+        """)
+      )
 
       File.chmod!(codex_binary, 0o755)
 
@@ -985,37 +1012,40 @@ defmodule SymphonyElixir.AppServerTest do
       System.put_env("SYMP_TEST_CODEx_TRACE", trace_file)
       File.mkdir_p!(workspace)
 
-      File.write!(codex_binary, """
-      #!/bin/sh
-      trace_file="${SYMP_TEST_CODEx_TRACE:-/tmp/codex-tool-call-failed.trace}"
-      count=0
-      while IFS= read -r line; do
-        count=$((count + 1))
-        printf 'JSON:%s\\n' \"$line\" >> \"$trace_file\"
+      File.write!(
+        codex_binary,
+        shell_script("""
+        #!/bin/sh
+        trace_file="${SYMP_TEST_CODEx_TRACE:-/tmp/codex-tool-call-failed.trace}"
+        count=0
+        while IFS= read -r line; do
+          count=$((count + 1))
+          printf 'JSON:%s\\n' \"$line\" >> \"$trace_file\"
 
-        case \"$count\" in
-          1)
-            printf '%s\\n' '{\"id\":1,\"result\":{}}'
-            ;;
-          2)
-            ;;
-          3)
-            printf '%s\\n' '{\"id\":2,\"result\":{\"thread\":{\"id\":\"thread-90b\"}}}'
-            ;;
-          4)
-            printf '%s\\n' '{\"id\":3,\"result\":{\"turn\":{\"id\":\"turn-90b\"}}}'
-            printf '%s\\n' '{\"id\":103,\"method\":\"item/tool/call\",\"params\":{\"tool\":\"linear_graphql\",\"callId\":\"call-90b\",\"threadId\":\"thread-90b\",\"turnId\":\"turn-90b\",\"arguments\":{\"query\":\"query Viewer { viewer { id } }\"}}}'
-            ;;
-          5)
-            printf '%s\\n' '{\"method\":\"turn/completed\"}'
-            exit 0
-            ;;
-          *)
-            exit 0
-            ;;
-        esac
-      done
-      """)
+          case \"$count\" in
+            1)
+              printf '%s\\n' '{\"id\":1,\"result\":{}}'
+              ;;
+            2)
+              ;;
+            3)
+              printf '%s\\n' '{\"id\":2,\"result\":{\"thread\":{\"id\":\"thread-90b\"}}}'
+              ;;
+            4)
+              printf '%s\\n' '{\"id\":3,\"result\":{\"turn\":{\"id\":\"turn-90b\"}}}'
+              printf '%s\\n' '{\"id\":103,\"method\":\"item/tool/call\",\"params\":{\"tool\":\"linear_graphql\",\"callId\":\"call-90b\",\"threadId\":\"thread-90b\",\"turnId\":\"turn-90b\",\"arguments\":{\"query\":\"query Viewer { viewer { id } }\"}}}'
+              ;;
+            5)
+              printf '%s\\n' '{\"method\":\"turn/completed\"}'
+              exit 0
+              ;;
+            *)
+              exit 0
+              ;;
+          esac
+        done
+        """)
+      )
 
       File.chmod!(codex_binary, 0o755)
 
@@ -1079,33 +1109,36 @@ defmodule SymphonyElixir.AppServerTest do
       codex_binary = Path.join(test_root, "fake-codex")
       File.mkdir_p!(workspace)
 
-      File.write!(codex_binary, """
-      #!/bin/sh
-      count=0
-      while IFS= read -r line; do
-        count=$((count + 1))
+      File.write!(
+        codex_binary,
+        shell_script("""
+        #!/bin/sh
+        count=0
+        while IFS= read -r line; do
+          count=$((count + 1))
 
-        case "$count" in
-          1)
-            padding=$(printf '%*s' 1100000 '' | tr ' ' a)
-            printf '{"id":1,"result":{},"padding":"%s"}\\n' "$padding"
-            ;;
-          2)
-            printf '%s\\n' '{"id":2,"result":{"thread":{"id":"thread-91"}}}'
-            ;;
-          3)
-            printf '%s\\n' '{"id":3,"result":{"turn":{"id":"turn-91"}}}'
-            ;;
-          4)
-            printf '%s\\n' '{"method":"turn/completed"}'
-            exit 0
-            ;;
-          *)
-            exit 0
-            ;;
-        esac
-      done
-      """)
+          case "$count" in
+            1)
+              padding=$(printf '%*s' 1100000 '' | tr ' ' a)
+              printf '{"id":1,"result":{},"padding":"%s"}\\n' "$padding"
+              ;;
+            2)
+              printf '%s\\n' '{"id":2,"result":{"thread":{"id":"thread-91"}}}'
+              ;;
+            3)
+              printf '%s\\n' '{"id":3,"result":{"turn":{"id":"turn-91"}}}'
+              ;;
+            4)
+              printf '%s\\n' '{"method":"turn/completed"}'
+              exit 0
+              ;;
+            *)
+              exit 0
+              ;;
+          esac
+        done
+        """)
+      )
 
       File.chmod!(codex_binary, 0o755)
 
@@ -1143,33 +1176,36 @@ defmodule SymphonyElixir.AppServerTest do
       codex_binary = Path.join(test_root, "fake-codex")
       File.mkdir_p!(workspace)
 
-      File.write!(codex_binary, """
-      #!/bin/sh
-      count=0
-      while IFS= read -r line; do
-        count=$((count + 1))
+      File.write!(
+        codex_binary,
+        shell_script("""
+        #!/bin/sh
+        count=0
+        while IFS= read -r line; do
+          count=$((count + 1))
 
-        case "$count" in
-          1)
-            printf '%s\\n' '{"id":1,"result":{}}'
-            ;;
-          2)
-            printf '%s\\n' '{"id":2,"result":{"thread":{"id":"thread-92"}}}'
-            ;;
-          3)
-            printf '%s\\n' '{"id":3,"result":{"turn":{"id":"turn-92"}}}'
-            ;;
-          4)
-            printf '%s\\n' 'warning: this is stderr noise' >&2
-            printf '%s\\n' '{"method":"turn/completed"}'
-            exit 0
-            ;;
-          *)
-            exit 0
-            ;;
-        esac
-      done
-      """)
+          case "$count" in
+            1)
+              printf '%s\\n' '{"id":1,"result":{}}'
+              ;;
+            2)
+              printf '%s\\n' '{"id":2,"result":{"thread":{"id":"thread-92"}}}'
+              ;;
+            3)
+              printf '%s\\n' '{"id":3,"result":{"turn":{"id":"turn-92"}}}'
+              ;;
+            4)
+              printf '%s\\n' 'warning: this is stderr noise' >&2
+              printf '%s\\n' '{"method":"turn/completed"}'
+              exit 0
+              ;;
+            *)
+              exit 0
+              ;;
+          esac
+        done
+        """)
+      )
 
       File.chmod!(codex_binary, 0o755)
 
@@ -1218,33 +1254,36 @@ defmodule SymphonyElixir.AppServerTest do
       codex_binary = Path.join(test_root, "fake-codex")
       File.mkdir_p!(workspace)
 
-      File.write!(codex_binary, """
-      #!/bin/sh
-      count=0
-      while IFS= read -r line; do
-        count=$((count + 1))
+      File.write!(
+        codex_binary,
+        shell_script("""
+        #!/bin/sh
+        count=0
+        while IFS= read -r line; do
+          count=$((count + 1))
 
-        case "$count" in
-          1)
-            printf '%s\\n' '{"id":1,"result":{}}'
-            ;;
-          2)
-            printf '%s\\n' '{"id":2,"result":{"thread":{"id":"thread-93"}}}'
-            ;;
-          3)
-            printf '%s\\n' '{"id":3,"result":{"turn":{"id":"turn-93"}}}'
-            ;;
-          4)
-            printf '%s\\n' '{"method":"turn/completed"'
-            printf '%s\\n' '{"method":"turn/completed"}'
-            exit 0
-            ;;
-          *)
-            exit 0
-            ;;
-        esac
-      done
-      """)
+          case "$count" in
+            1)
+              printf '%s\\n' '{"id":1,"result":{}}'
+              ;;
+            2)
+              printf '%s\\n' '{"id":2,"result":{"thread":{"id":"thread-93"}}}'
+              ;;
+            3)
+              printf '%s\\n' '{"id":3,"result":{"turn":{"id":"turn-93"}}}'
+              ;;
+            4)
+              printf '%s\\n' '{"method":"turn/completed"'
+              printf '%s\\n' '{"method":"turn/completed"}'
+              exit 0
+              ;;
+            *)
+              exit 0
+              ;;
+          esac
+        done
+        """)
+      )
 
       File.chmod!(codex_binary, 0o755)
 
@@ -1300,36 +1339,39 @@ defmodule SymphonyElixir.AppServerTest do
       System.put_env("SYMP_TEST_SSH_TRACE", trace_file)
       System.put_env("PATH", test_root <> ":" <> (previous_path || ""))
 
-      File.write!(fake_ssh, """
-      #!/bin/sh
-      trace_file="${SYMP_TEST_SSH_TRACE:-/tmp/symphony-fake-ssh.trace}"
-      count=0
-      printf 'ARGV:%s\\n' "$*" >> "$trace_file"
+      File.write!(
+        fake_ssh,
+        shell_script("""
+        #!/bin/sh
+        trace_file="${SYMP_TEST_SSH_TRACE:-/tmp/symphony-fake-ssh.trace}"
+        count=0
+        printf 'ARGV:%s\\n' "$*" >> "$trace_file"
 
-      while IFS= read -r line; do
-        count=$((count + 1))
-        printf 'JSON:%s\\n' "$line" >> "$trace_file"
+        while IFS= read -r line; do
+          count=$((count + 1))
+          printf 'JSON:%s\\n' "$line" >> "$trace_file"
 
-        case "$count" in
-          1)
-            printf '%s\\n' '{"id":1,"result":{}}'
-            ;;
-          2)
-            printf '%s\\n' '{"id":2,"result":{"thread":{"id":"thread-remote"}}}'
-            ;;
-          3)
-            printf '%s\\n' '{"id":3,"result":{"turn":{"id":"turn-remote"}}}'
-            ;;
-          4)
-            printf '%s\\n' '{"method":"turn/completed"}'
-            exit 0
-            ;;
-          *)
-            exit 0
-            ;;
-        esac
-      done
-      """)
+          case "$count" in
+            1)
+              printf '%s\\n' '{"id":1,"result":{}}'
+              ;;
+            2)
+              printf '%s\\n' '{"id":2,"result":{"thread":{"id":"thread-remote"}}}'
+              ;;
+            3)
+              printf '%s\\n' '{"id":3,"result":{"turn":{"id":"turn-remote"}}}'
+              ;;
+            4)
+              printf '%s\\n' '{"method":"turn/completed"}'
+              exit 0
+              ;;
+            *)
+              exit 0
+              ;;
+          esac
+        done
+        """)
+      )
 
       File.chmod!(fake_ssh, 0o755)
 

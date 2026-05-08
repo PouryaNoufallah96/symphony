@@ -4,6 +4,8 @@ defmodule SymphonyElixir.ExtensionsTest do
   import Phoenix.ConnTest
   import Phoenix.LiveViewTest
 
+  alias SymphonyElixir.Ado
+  alias SymphonyElixir.GitHub
   alias SymphonyElixir.Linear.Adapter
   alias SymphonyElixir.Tracker.Memory
 
@@ -203,6 +205,12 @@ defmodule SymphonyElixir.ExtensionsTest do
 
     write_workflow_file!(Workflow.workflow_file_path(), tracker_kind: "linear")
     assert SymphonyElixir.Tracker.adapter() == Adapter
+
+    write_workflow_file!(Workflow.workflow_file_path(), tracker_kind: "ado")
+    assert SymphonyElixir.Tracker.adapter() == Ado.Adapter
+
+    write_workflow_file!(Workflow.workflow_file_path(), tracker_kind: "github")
+    assert SymphonyElixir.Tracker.adapter() == GitHub.Adapter
   end
 
   test "linear adapter delegates reads and validates mutation responses" do
@@ -317,6 +325,155 @@ defmodule SymphonyElixir.ExtensionsTest do
     )
 
     assert {:error, :issue_update_failed} = Adapter.update_issue_state("issue-1", "Odd")
+  end
+
+  test "ado adapter delegates tracker operations to az cli and normalizes issues" do
+    parent = self()
+
+    Application.put_env(:symphony_elixir, :ado_cmd_runner, fn "az", args, _opts ->
+      send(parent, {:az_called, args})
+
+      cond do
+        Enum.take(args, 2) == ["boards", "query"] ->
+          {Jason.encode!(%{"workItems" => [%{"id" => 123}]}), 0}
+
+        Enum.take(args, 3) == ["boards", "work-item", "show"] ->
+          {Jason.encode!(%{
+             "id" => 123,
+             "_links" => %{"html" => %{"href" => "https://dev.azure.com/org/project/_workitems/edit/123"}},
+             "fields" => %{
+               "System.Id" => 123,
+               "System.Title" => "ADO issue",
+               "System.Description" => "Body",
+               "System.State" => "Active",
+               "System.AssignedTo" => %{"uniqueName" => "dev@example.org"},
+               "System.Tags" => "backend; agent",
+               "System.CreatedDate" => "2026-01-01T00:00:00Z",
+               "System.ChangedDate" => "2026-01-02T00:00:00Z"
+             }
+           }), 0}
+
+        Enum.take(args, 3) == ["boards", "work-item", "update"] ->
+          {Jason.encode!(%{"ok" => true}), 0}
+      end
+    end)
+
+    write_workflow_file!(Workflow.workflow_file_path(),
+      tracker_kind: "ado",
+      tracker_organization: "https://dev.azure.com/org",
+      tracker_project: "Project",
+      tracker_active_states: ["Active"]
+    )
+
+    assert {:ok, [issue]} = Ado.Adapter.fetch_candidate_issues()
+    assert issue.id == "123"
+    assert issue.identifier == "ADO-123"
+    assert issue.title == "ADO issue"
+    assert issue.state == "Active"
+    assert issue.labels == ["backend", "agent"]
+    assert issue.assignee_id == "dev@example.org"
+    assert issue.raw["id"] == 123
+
+    assert_receive {:az_called, ["boards", "query", "--wiql", wiql | _]}
+    assert wiql =~ "[System.State] IN ('Active')"
+    assert wiql =~ "[System.TeamProject] = 'Project'"
+    assert_receive {:az_called, ["boards", "work-item", "show" | _]}
+
+    assert :ok = Ado.Adapter.create_comment("123", "hello")
+    assert_receive {:az_called, args}
+    assert "--discussion" in args
+    assert "hello" in args
+
+    assert :ok = Ado.Adapter.update_issue_state("123", "Done")
+    assert_receive {:az_called, args}
+    assert "--state" in args
+    assert "Done" in args
+    refute "--iteration" in args
+
+    System.put_env("ADO_ITERATION", "Ultra Business\\Sprint72")
+
+    try do
+      assert :ok = Ado.Adapter.update_issue_state("123", "Done")
+      assert_receive {:az_called, args}
+      assert "--iteration" in args
+      assert "Ultra Business\\Sprint72" in args
+    after
+      System.delete_env("ADO_ITERATION")
+    end
+  end
+
+  test "github adapter delegates tracker operations to gh cli and normalizes issues" do
+    parent = self()
+
+    Application.put_env(:symphony_elixir, :github_cmd_runner, fn "gh", args, _opts ->
+      send(parent, {:gh_called, args})
+
+      cond do
+        Enum.take(args, 2) == ["issue", "list"] ->
+          {Jason.encode!([
+             %{
+               "number" => 42,
+               "title" => "GitHub issue",
+               "body" => "Body",
+               "state" => "OPEN",
+               "url" => "https://github.com/org/repo/issues/42",
+               "labels" => [%{"name" => "backend"}],
+               "assignees" => [%{"login" => "dev"}],
+               "createdAt" => "2026-01-01T00:00:00Z",
+               "updatedAt" => "2026-01-02T00:00:00Z"
+             }
+           ]), 0}
+
+        Enum.take(args, 2) == ["issue", "view"] ->
+          {Jason.encode!(%{"number" => 42, "title" => "GitHub issue", "state" => "CLOSED"}), 0}
+
+        Enum.take(args, 2) in [["issue", "comment"], ["issue", "close"], ["issue", "reopen"], ["issue", "edit"]] ->
+          {"", 0}
+      end
+    end)
+
+    write_workflow_file!(Workflow.workflow_file_path(),
+      tracker_kind: "github",
+      tracker_repository: "org/repo",
+      tracker_active_states: ["open"]
+    )
+
+    assert {:ok, [issue]} = GitHub.Adapter.fetch_candidate_issues()
+    assert issue.id == "42"
+    assert issue.identifier == "#42"
+    assert issue.title == "GitHub issue"
+    assert issue.state == "Open"
+    assert issue.labels == ["backend"]
+    assert issue.assignee_id == "dev"
+    assert issue.raw["number"] == 42
+
+    assert_receive {:gh_called, ["issue", "list" | list_args]}
+    assert "--state" in list_args
+    assert "open" in list_args
+    assert "--repo" in list_args
+    assert "org/repo" in list_args
+
+    assert {:ok, [closed_issue]} = GitHub.Adapter.fetch_issue_states_by_ids(["42"])
+    assert closed_issue.state == "Closed"
+    assert_receive {:gh_called, ["issue", "view" | _]}
+
+    assert :ok = GitHub.Adapter.create_comment("42", "hello")
+    assert_receive {:gh_called, args}
+    assert Enum.take(args, 2) == ["issue", "comment"]
+    assert "hello" in args
+
+    assert :ok = GitHub.Adapter.update_issue_state("42", "Done")
+    assert_receive {:gh_called, ["issue", "close" | _args]}
+
+    assert :ok = GitHub.Adapter.update_issue_state("42", "In Progress")
+    assert_receive {:gh_called, ["issue", "edit" | args]}
+    assert "--add-label" in args
+    assert "In Progress" in args
+
+    assert :ok = GitHub.Adapter.update_issue_state("42", "Needs QA")
+    assert_receive {:gh_called, ["issue", "edit" | args]}
+    assert "--add-label" in args
+    assert "Needs QA" in args
   end
 
   test "phoenix observability api preserves state, issue, and refresh responses" do

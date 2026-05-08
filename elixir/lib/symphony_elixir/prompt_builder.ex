@@ -14,11 +14,16 @@ defmodule SymphonyElixir.PromptBuilder do
       |> prompt_template!()
       |> parse_template!()
 
+    config = Config.settings!() |> Map.take([:agent, :tracker, :vcs]) |> to_solid_map()
+
     template
     |> Solid.render!(
       %{
         "attempt" => Keyword.get(opts, :attempt),
-        "issue" => issue |> Map.from_struct() |> to_solid_map()
+        "agent" => config["agent"],
+        "issue" => issue |> Map.from_struct() |> to_solid_map(),
+        "tracker" => config["tracker"],
+        "vcs" => config["vcs"]
       },
       @render_opts
     )

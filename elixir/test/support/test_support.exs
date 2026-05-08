@@ -22,7 +22,14 @@ defmodule SymphonyElixir.TestSupport do
       alias SymphonyElixir.Workspace
 
       import SymphonyElixir.TestSupport,
-        only: [write_workflow_file!: 1, write_workflow_file!: 2, restore_env: 2, stop_default_http_server: 0]
+        only: [
+          write_workflow_file!: 1,
+          write_workflow_file!: 2,
+          restore_env: 2,
+          stop_default_http_server: 0,
+          shell_script: 1,
+          normalize_newlines: 1
+        ]
 
       setup do
         workflow_root =
@@ -43,6 +50,8 @@ defmodule SymphonyElixir.TestSupport do
           Application.delete_env(:symphony_elixir, :server_port_override)
           Application.delete_env(:symphony_elixir, :memory_tracker_issues)
           Application.delete_env(:symphony_elixir, :memory_tracker_recipient)
+          Application.delete_env(:symphony_elixir, :ado_cmd_runner)
+          Application.delete_env(:symphony_elixir, :github_cmd_runner)
           File.rm_rf(workflow_root)
         end)
 
@@ -68,6 +77,16 @@ defmodule SymphonyElixir.TestSupport do
 
   def restore_env(key, nil), do: System.delete_env(key)
   def restore_env(key, value), do: System.put_env(key, value)
+
+  def shell_script(script) when is_binary(script) do
+    script
+    |> normalize_newlines()
+    |> String.trim_leading()
+  end
+
+  def normalize_newlines(content) when is_binary(content) do
+    String.replace(content, "\r\n", "\n")
+  end
 
   def stop_default_http_server do
     case Enum.find(Supervisor.which_children(SymphonyElixir.Supervisor), fn
@@ -95,7 +114,12 @@ defmodule SymphonyElixir.TestSupport do
           tracker_kind: "linear",
           tracker_endpoint: "https://api.linear.app/graphql",
           tracker_api_token: "token",
+          tracker_organization: nil,
+          tracker_project: nil,
           tracker_project_slug: "project",
+          tracker_repository: nil,
+          tracker_owner: nil,
+          tracker_repo: nil,
           tracker_team_key: nil,
           tracker_assignee: nil,
           tracker_active_states: ["Todo", "In Progress"],
@@ -104,10 +128,12 @@ defmodule SymphonyElixir.TestSupport do
           workspace_root: Path.join(System.tmp_dir!(), "symphony_workspaces"),
           worker_ssh_hosts: [],
           worker_max_concurrent_agents_per_host: nil,
+          agent_kind: nil,
           max_concurrent_agents: 10,
           max_turns: 20,
           max_retry_backoff_ms: 300_000,
           max_concurrent_agents_by_state: %{},
+          vcs_kind: nil,
           codex_command: "codex app-server",
           codex_approval_policy: %{reject: %{sandbox_approval: true, rules: true, mcp_elicitations: true}},
           codex_thread_sandbox: "workspace-write",
@@ -115,6 +141,13 @@ defmodule SymphonyElixir.TestSupport do
           codex_turn_timeout_ms: 3_600_000,
           codex_read_timeout_ms: 5_000,
           codex_stall_timeout_ms: 300_000,
+          claude_code_command: nil,
+          claude_code_output_format: nil,
+          claude_code_permission_mode: nil,
+          claude_code_session_dir_name: nil,
+          claude_code_turn_timeout_ms: nil,
+          claude_code_stop_grace_ms: nil,
+          claude_code_max_prompt_bytes: nil,
           hook_after_create: nil,
           hook_before_run: nil,
           hook_after_run: nil,
@@ -133,7 +166,12 @@ defmodule SymphonyElixir.TestSupport do
     tracker_kind = Keyword.get(config, :tracker_kind)
     tracker_endpoint = Keyword.get(config, :tracker_endpoint)
     tracker_api_token = Keyword.get(config, :tracker_api_token)
+    tracker_organization = Keyword.get(config, :tracker_organization)
+    tracker_project = Keyword.get(config, :tracker_project)
     tracker_project_slug = Keyword.get(config, :tracker_project_slug)
+    tracker_repository = Keyword.get(config, :tracker_repository)
+    tracker_owner = Keyword.get(config, :tracker_owner)
+    tracker_repo = Keyword.get(config, :tracker_repo)
     tracker_team_key = Keyword.get(config, :tracker_team_key)
     tracker_assignee = Keyword.get(config, :tracker_assignee)
     tracker_active_states = Keyword.get(config, :tracker_active_states)
@@ -142,10 +180,12 @@ defmodule SymphonyElixir.TestSupport do
     workspace_root = Keyword.get(config, :workspace_root)
     worker_ssh_hosts = Keyword.get(config, :worker_ssh_hosts)
     worker_max_concurrent_agents_per_host = Keyword.get(config, :worker_max_concurrent_agents_per_host)
+    agent_kind = Keyword.get(config, :agent_kind)
     max_concurrent_agents = Keyword.get(config, :max_concurrent_agents)
     max_turns = Keyword.get(config, :max_turns)
     max_retry_backoff_ms = Keyword.get(config, :max_retry_backoff_ms)
     max_concurrent_agents_by_state = Keyword.get(config, :max_concurrent_agents_by_state)
+    vcs_kind = Keyword.get(config, :vcs_kind)
     codex_command = Keyword.get(config, :codex_command)
     codex_approval_policy = Keyword.get(config, :codex_approval_policy)
     codex_thread_sandbox = Keyword.get(config, :codex_thread_sandbox)
@@ -153,6 +193,13 @@ defmodule SymphonyElixir.TestSupport do
     codex_turn_timeout_ms = Keyword.get(config, :codex_turn_timeout_ms)
     codex_read_timeout_ms = Keyword.get(config, :codex_read_timeout_ms)
     codex_stall_timeout_ms = Keyword.get(config, :codex_stall_timeout_ms)
+    claude_code_command = Keyword.get(config, :claude_code_command)
+    claude_code_output_format = Keyword.get(config, :claude_code_output_format)
+    claude_code_permission_mode = Keyword.get(config, :claude_code_permission_mode)
+    claude_code_session_dir_name = Keyword.get(config, :claude_code_session_dir_name)
+    claude_code_turn_timeout_ms = Keyword.get(config, :claude_code_turn_timeout_ms)
+    claude_code_stop_grace_ms = Keyword.get(config, :claude_code_stop_grace_ms)
+    claude_code_max_prompt_bytes = Keyword.get(config, :claude_code_max_prompt_bytes)
     hook_after_create = Keyword.get(config, :hook_after_create)
     hook_before_run = Keyword.get(config, :hook_before_run)
     hook_after_run = Keyword.get(config, :hook_after_run)
@@ -172,7 +219,12 @@ defmodule SymphonyElixir.TestSupport do
         "  kind: #{yaml_value(tracker_kind)}",
         "  endpoint: #{yaml_value(tracker_endpoint)}",
         "  api_key: #{yaml_value(tracker_api_token)}",
+        "  organization: #{yaml_value(tracker_organization)}",
+        "  project: #{yaml_value(tracker_project)}",
         "  project_slug: #{yaml_value(tracker_project_slug)}",
+        "  repository: #{yaml_value(tracker_repository)}",
+        "  owner: #{yaml_value(tracker_owner)}",
+        "  repo: #{yaml_value(tracker_repo)}",
         "  team_key: #{yaml_value(tracker_team_key)}",
         "  assignee: #{yaml_value(tracker_assignee)}",
         "  active_states: #{yaml_value(tracker_active_states)}",
@@ -183,10 +235,13 @@ defmodule SymphonyElixir.TestSupport do
         "  root: #{yaml_value(workspace_root)}",
         worker_yaml(worker_ssh_hosts, worker_max_concurrent_agents_per_host),
         "agent:",
+        "  kind: #{yaml_value(agent_kind)}",
         "  max_concurrent_agents: #{yaml_value(max_concurrent_agents)}",
         "  max_turns: #{yaml_value(max_turns)}",
         "  max_retry_backoff_ms: #{yaml_value(max_retry_backoff_ms)}",
         "  max_concurrent_agents_by_state: #{yaml_value(max_concurrent_agents_by_state)}",
+        "vcs:",
+        "  kind: #{yaml_value(vcs_kind)}",
         "codex:",
         "  command: #{yaml_value(codex_command)}",
         "  approval_policy: #{yaml_value(codex_approval_policy)}",
@@ -195,6 +250,15 @@ defmodule SymphonyElixir.TestSupport do
         "  turn_timeout_ms: #{yaml_value(codex_turn_timeout_ms)}",
         "  read_timeout_ms: #{yaml_value(codex_read_timeout_ms)}",
         "  stall_timeout_ms: #{yaml_value(codex_stall_timeout_ms)}",
+        claude_code_yaml(
+          claude_code_command,
+          claude_code_output_format,
+          claude_code_permission_mode,
+          claude_code_session_dir_name,
+          claude_code_turn_timeout_ms,
+          claude_code_stop_grace_ms,
+          claude_code_max_prompt_bytes
+        ),
         hooks_yaml(hook_after_create, hook_before_run, hook_after_run, hook_before_remove, hook_timeout_ms),
         observability_yaml(observability_enabled, observability_refresh_ms, observability_render_interval_ms),
         server_yaml(server_port, server_host),
@@ -275,6 +339,23 @@ defmodule SymphonyElixir.TestSupport do
       "server:",
       port && "  port: #{yaml_value(port)}",
       host && "  host: #{yaml_value(host)}"
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join("\n")
+  end
+
+  defp claude_code_yaml(nil, nil, nil, nil, nil, nil, nil), do: nil
+
+  defp claude_code_yaml(command, output_format, permission_mode, session_dir_name, turn_timeout_ms, stop_grace_ms, max_prompt_bytes) do
+    [
+      "claude_code:",
+      command && "  command: #{yaml_value(command)}",
+      output_format && "  output_format: #{yaml_value(output_format)}",
+      permission_mode && "  permission_mode: #{yaml_value(permission_mode)}",
+      session_dir_name && "  session_dir_name: #{yaml_value(session_dir_name)}",
+      turn_timeout_ms && "  turn_timeout_ms: #{yaml_value(turn_timeout_ms)}",
+      stop_grace_ms && "  stop_grace_ms: #{yaml_value(stop_grace_ms)}",
+      max_prompt_bytes && "  max_prompt_bytes: #{yaml_value(max_prompt_bytes)}"
     ]
     |> Enum.reject(&is_nil/1)
     |> Enum.join("\n")

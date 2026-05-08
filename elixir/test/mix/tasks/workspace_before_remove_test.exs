@@ -309,7 +309,7 @@ defmodule Mix.Tasks.Workspace.BeforeRemoveTest do
 
       Enum.each(scripts, fn {name, script} ->
         path = Path.join(bin_dir, name)
-        File.write!(path, script)
+        File.write!(path, shell_script(script))
         File.chmod!(path, 0o755)
       end)
 
@@ -325,6 +325,12 @@ defmodule Mix.Tasks.Workspace.BeforeRemoveTest do
     after
       File.rm_rf!(root)
     end
+  end
+
+  defp shell_script(script) do
+    script
+    |> String.replace("\r\n", "\n")
+    |> String.trim_leading()
   end
 
   defp with_path(paths, fun) do

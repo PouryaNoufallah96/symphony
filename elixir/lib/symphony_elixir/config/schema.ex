@@ -48,7 +48,12 @@ defmodule SymphonyElixir.Config.Schema do
       field(:kind, :string)
       field(:endpoint, :string, default: "https://api.linear.app/graphql")
       field(:api_key, :string)
+      field(:organization, :string)
+      field(:project, :string)
       field(:project_slug, :string)
+      field(:repository, :string)
+      field(:owner, :string)
+      field(:repo, :string)
       field(:team_key, :string)
       field(:assignee, :string)
       field(:active_states, {:array, :string}, default: ["Todo", "In Progress"])
@@ -60,9 +65,40 @@ defmodule SymphonyElixir.Config.Schema do
       schema
       |> cast(
         attrs,
-        [:kind, :endpoint, :api_key, :project_slug, :team_key, :assignee, :active_states, :terminal_states],
+        [
+          :kind,
+          :endpoint,
+          :api_key,
+          :organization,
+          :project,
+          :project_slug,
+          :repository,
+          :owner,
+          :repo,
+          :team_key,
+          :assignee,
+          :active_states,
+          :terminal_states
+        ],
         empty_values: []
       )
+    end
+  end
+
+  defmodule Vcs do
+    @moduledoc false
+    use Ecto.Schema
+    import Ecto.Changeset
+
+    @primary_key false
+    embedded_schema do
+      field(:kind, :string)
+    end
+
+    @spec changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
+    def changeset(schema, attrs) do
+      schema
+      |> cast(attrs, [:kind], empty_values: [])
     end
   end
 
@@ -129,6 +165,7 @@ defmodule SymphonyElixir.Config.Schema do
 
     @primary_key false
     embedded_schema do
+      field(:kind, :string)
       field(:max_concurrent_agents, :integer, default: 10)
       field(:max_turns, :integer, default: 20)
       field(:max_retry_backoff_ms, :integer, default: 300_000)
@@ -140,7 +177,7 @@ defmodule SymphonyElixir.Config.Schema do
       schema
       |> cast(
         attrs,
-        [:max_concurrent_agents, :max_turns, :max_retry_backoff_ms, :max_concurrent_agents_by_state],
+        [:kind, :max_concurrent_agents, :max_turns, :max_retry_backoff_ms, :max_concurrent_agents_by_state],
         empty_values: []
       )
       |> validate_number(:max_concurrent_agents, greater_than: 0)
@@ -197,6 +234,45 @@ defmodule SymphonyElixir.Config.Schema do
       |> validate_number(:turn_timeout_ms, greater_than: 0)
       |> validate_number(:read_timeout_ms, greater_than: 0)
       |> validate_number(:stall_timeout_ms, greater_than_or_equal_to: 0)
+    end
+  end
+
+  defmodule ClaudeCode do
+    @moduledoc false
+    use Ecto.Schema
+    import Ecto.Changeset
+
+    @primary_key false
+    embedded_schema do
+      field(:command, :string, default: "claude")
+      field(:output_format, :string, default: "stream-json")
+      field(:permission_mode, :string, default: "dangerously-skip-permissions")
+      field(:session_dir_name, :string, default: ".claude-thread")
+      field(:turn_timeout_ms, :integer, default: 3_600_000)
+      field(:stop_grace_ms, :integer, default: 5_000)
+      field(:max_prompt_bytes, :integer, default: 1_048_576)
+    end
+
+    @spec changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
+    def changeset(schema, attrs) do
+      schema
+      |> cast(
+        attrs,
+        [
+          :command,
+          :output_format,
+          :permission_mode,
+          :session_dir_name,
+          :turn_timeout_ms,
+          :stop_grace_ms,
+          :max_prompt_bytes
+        ],
+        empty_values: []
+      )
+      |> validate_required([:command])
+      |> validate_number(:turn_timeout_ms, greater_than: 0)
+      |> validate_number(:stop_grace_ms, greater_than_or_equal_to: 0)
+      |> validate_number(:max_prompt_bytes, greater_than: 0)
     end
   end
 
@@ -268,7 +344,9 @@ defmodule SymphonyElixir.Config.Schema do
     embeds_one(:workspace, Workspace, on_replace: :update, defaults_to_struct: true)
     embeds_one(:worker, Worker, on_replace: :update, defaults_to_struct: true)
     embeds_one(:agent, Agent, on_replace: :update, defaults_to_struct: true)
+    embeds_one(:vcs, Vcs, on_replace: :update, defaults_to_struct: true)
     embeds_one(:codex, Codex, on_replace: :update, defaults_to_struct: true)
+    embeds_one(:claude_code, ClaudeCode, on_replace: :update, defaults_to_struct: true)
     embeds_one(:hooks, Hooks, on_replace: :update, defaults_to_struct: true)
     embeds_one(:observability, Observability, on_replace: :update, defaults_to_struct: true)
     embeds_one(:server, Server, on_replace: :update, defaults_to_struct: true)
@@ -360,7 +438,9 @@ defmodule SymphonyElixir.Config.Schema do
     |> cast_embed(:workspace, with: &Workspace.changeset/2)
     |> cast_embed(:worker, with: &Worker.changeset/2)
     |> cast_embed(:agent, with: &Agent.changeset/2)
+    |> cast_embed(:vcs, with: &Vcs.changeset/2)
     |> cast_embed(:codex, with: &Codex.changeset/2)
+    |> cast_embed(:claude_code, with: &ClaudeCode.changeset/2)
     |> cast_embed(:hooks, with: &Hooks.changeset/2)
     |> cast_embed(:observability, with: &Observability.changeset/2)
     |> cast_embed(:server, with: &Server.changeset/2)

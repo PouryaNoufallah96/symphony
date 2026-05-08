@@ -13,12 +13,16 @@ This directory contains the current Elixir/OTP implementation of Symphony, based
 
 ## How it works
 
-1. Polls Linear for candidate work
+1. Polls the configured tracker for candidate work
 2. Creates a workspace per issue
 3. Launches Codex in [App Server mode](https://developers.openai.com/codex/app-server/) inside the
    workspace
 4. Sends a workflow prompt to Codex
 5. Keeps Codex working on the issue until the work is done
+
+The tracker adapter is selected by `tracker.kind`. Supported values are `linear`, `memory`, `ado`,
+and `github`. ADO uses the `az` CLI, GitHub uses the `gh` CLI, and Linear keeps using the existing
+GraphQL client.
 
 During app-server sessions, Symphony also serves a client-side `linear_graphql` tool so that repo
 skills can make raw Linear GraphQL calls.
@@ -98,8 +102,11 @@ hooks:
   after_create: |
     git clone git@github.com:your-org/your-repo.git .
 agent:
+  kind: codex
   max_concurrent_agents: 10
   max_turns: 20
+vcs:
+  kind: ado
 codex:
   command: codex app-server
 ---
@@ -111,9 +118,17 @@ Title: {{ issue.title }} Body: {{ issue.description }}
 
 Notes:
 
-- If a value is missing, defaults are used.
+- If a value is missing, defaults are used. `agent.kind` and `vcs.kind` are nilable so prompt
+  templates can opt into conditionals without forcing a backend or remote VCS mode.
 - `tracker.project_slug` narrows polling to one Linear project. `tracker.team_key` can be used
   instead to poll all active issues in one Linear team, such as a `/team/ENG/all` queue.
+- For ADO, set `tracker.kind: ado` and optionally `tracker.organization` plus `tracker.project`.
+  The adapter shells out to `az boards`. State updates preserve each work item's existing iteration
+  unless `ADO_ITERATION` is set as an explicit manual override.
+- For GitHub, set `tracker.kind: github` and optionally `tracker.repository: owner/repo` or
+  `tracker.owner` plus `tracker.repo`. The adapter shells out to `gh issue`.
+- Prompt templates can branch on `agent.kind`, `tracker.kind`, and `vcs.kind`, for example
+  `{% if vcs.kind == "ado" %}`.
 - Safer Codex defaults are used when policy fields are omitted:
   - `codex.approval_policy` defaults to `{"reject":{"sandbox_approval":true,"rules":true,"mcp_elicitations":true}}`
   - `codex.thread_sandbox` defaults to `workspace-write`
