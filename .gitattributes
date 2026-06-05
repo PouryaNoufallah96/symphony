@@ -1,0 +1,2 @@
+# Keep shell scripts LF so the shebang survives on autocrlf=true checkouts.
+*.sh text eol=lf
