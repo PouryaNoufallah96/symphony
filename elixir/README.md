@@ -205,18 +205,34 @@ make all
 
 ## Maintaining this fork
 
-This branch carries UltraBusiness-specific support for polling a Linear team queue via
-`tracker.team_key`. To bring in upstream Symphony changes later:
+This branch carries UltraBusiness-specific customizations (Linear `tracker.team_key`,
+Claude Code agent backend, ADO + GitHub tracker/VCS adapters, and Solid `agent`/`tracker`/`vcs`
+prompt assigns). To bring in upstream Symphony changes **without breaking those customizations**,
+use the guarded sync script:
+
+```bash
+cd /Users/pourya/projects/tools/symphony
+scripts/sync-upstream.sh          # merge + full test suite, leave the commit local
+scripts/sync-upstream.sh --push   # also push to the fork remote when green
+```
+
+The script refuses to run on a dirty tree, shows the incoming commits, merges without
+committing, then runs the full test suite. If tests fail it runs `git merge --abort` and
+restores the pre-sync state; if there are merge conflicts it stops with instructions and
+never auto-resolves them (conflicts in this fork are almost always additive — keep both
+sides). Only when everything is green does it commit and rebuild the escript.
+
+Manual equivalent, if you prefer to drive it by hand:
 
 ```bash
 cd /Users/pourya/projects/tools/symphony
 git fetch origin
 git switch ultrabusiness-team-key
-git merge origin/main
+git merge origin/main          # resolve any (additive) conflicts, keeping fork customizations
 cd elixir
-mise exec -- mix build
-mise exec -- mix test test/symphony_elixir/core_test.exs:4 test/symphony_elixir/workspace_and_config_test.exs:727
-git push
+mise exec -- mix test          # must pass
+mise exec -- mix build         # rebuild escript
+git push fork ultrabusiness-team-key
 ```
 
 Run the real external end-to-end test only when you want Symphony to create disposable Linear
