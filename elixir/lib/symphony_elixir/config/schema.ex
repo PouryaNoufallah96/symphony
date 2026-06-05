@@ -56,6 +56,7 @@ defmodule SymphonyElixir.Config.Schema do
       field(:repo, :string)
       field(:team_key, :string)
       field(:assignee, :string)
+      field(:required_labels, {:array, :string}, default: [])
       field(:active_states, {:array, :string}, default: ["Todo", "In Progress"])
       field(:terminal_states, {:array, :string}, default: ["Closed", "Cancelled", "Canceled", "Duplicate", "Done"])
     end
@@ -77,11 +78,17 @@ defmodule SymphonyElixir.Config.Schema do
           :repo,
           :team_key,
           :assignee,
+          :required_labels,
           :active_states,
           :terminal_states
         ],
         empty_values: []
       )
+      |> update_change(:required_labels, fn labels ->
+        labels
+        |> Enum.map(&(String.trim(&1) |> String.downcase()))
+        |> Enum.uniq()
+      end)
     end
   end
 

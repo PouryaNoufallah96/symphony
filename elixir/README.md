@@ -127,6 +127,9 @@ Notes:
   templates can opt into conditionals without forcing a backend or remote VCS mode.
 - `tracker.project_slug` narrows polling to one Linear project. `tracker.team_key` can be used
   instead to poll all active issues in one Linear team, such as a `/team/ENG/all` queue.
+- `tracker.required_labels` is optional. When set, an issue must have every
+  configured label to dispatch or continue running. Label matching ignores
+  case and surrounding whitespace. A blank configured label matches no issue.
 - For ADO, set `tracker.kind: ado` and optionally `tracker.organization` plus `tracker.project`.
   The adapter shells out to `az boards`. State updates preserve each work item's existing iteration
   unless `ADO_ITERATION` is set as an explicit manual override.
